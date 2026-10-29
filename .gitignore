@@ -1,0 +1,20 @@
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+
+# 签名密钥（切勿提交）
+hongguo.jks
+keystore.properties
+*.jks
+*.keystore
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 构建输出
+*.apk
+*.aab

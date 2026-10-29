@@ -1,0 +1,16 @@
+{
+  "schema": 3,
+  "name": "hongguo-main",
+  "packageName": "xyz.kejiyu.hongguo",
+  "language": "XPOSED_MODULE",
+  "root": "\/storage\/emulated\/0\/MobiCode Studio\/Projects\/hongguo-main",
+  "minSdk": 26,
+  "targetSdk": 36,
+  "versionName": "1.0",
+  "versionCode": 1,
+  "debugMode": true,
+  "permissions": [
+    "android.permission.INTERNET"
+  ],
+  "updatedAt": 1793196677206
+}
