@@ -4,7 +4,7 @@ object TargetNames {
 
     const val CN_PACKAGE = "com.phoenix.read"
     const val OVERSEA_PACKAGE = "com.phoenix.read.oversea.gp"
-    val SUPPORTED_CN_VERSIONS = listOf("7.3.1.32", "7.3.2.32", "7.3.3.18", "7.4.3.32")
+    val SUPPORTED_CN_VERSIONS = listOf("7.3.1.32", "7.3.2.32", "7.3.3.18", "7.4.3.32", "7.4.5.32")
     val SUPPORTED_OVERSEA_VERSIONS = listOf("7.3.1.32")
 
     data class Names(
@@ -323,6 +323,64 @@ object TargetNames {
         pauseRestoreIds = emptyList(),
     )
 
+    internal val CN_74532 = Names(
+        profileId = "CN-7.4.5.32",
+        packageName = CN_PACKAGE,
+        versionName = "7.4.5.32",
+        useLegacySeedIds = false,
+        structuralFullscreenWatch = true,
+        seriesToolbarProfile = "cn73318",
+        shortHolder = "com.dragon.read.component.shortvideo.impl.fullscreen.i",
+        holderBaseS1 = "xb5.p0",
+        shortStateMethod = "k1",
+        shortMaskMethod = "A0",
+        shortControlsMethod = "Qe",
+        shortConfigMethod = "",
+        shortLayoutResetMethod = "",
+        shortLandscapeMethod = "s3",
+        shortMaskField = "p3",
+        shortNativeClearField = "",
+        shortCleanManagerField = "M2",
+        homeFragmentMaskMethod = "K1",
+        homeFragmentMaskField = "e",
+        seriesFragmentRefreshMethod = "",
+        seriesPagerGetter = "",
+        seriesHolderGetter = "",
+        seriesLayoutFields = listOf("j", "k", "l", "m", "n", "p4", "r", "N3", "O3", "P3", "q"),
+        fixedToolbarShowMethod = "N",
+        customizeToolbarShowMethod = "L",
+        customizeToolbarApplyMethod = "M",
+        toolbarBase = "com.dragon.read.pages.video.layers.toolbarlayer.b",
+        progressBar = "com.dragon.read.video.view.SSSeekBarFixed",
+        hideView1 = "",
+        hideView2 = "",
+        oledBright = "",
+        oledBrightAction = "",
+        topZoneTouch = "",
+        playbackState = "ib5.y",
+        adVideoEndShowMethod = "",
+        pauseAdEntryClass = "com.dragon.read.component.shortvideo.impl.inject.view.j4",
+        pauseAdEntryMethod = "b",
+        resolutionController = "ib5.y",
+        resolutionModelMethods = listOf("g"),
+        resolutionEngineField = "h",
+        resolutionApplyMethod = "t",
+        doubleTapHandlers = listOf("com.dragon.read.component.shortvideo.impl.fullscreen.i\$d"),
+        doubleTapLikeView = "fe7.c0",
+        doubleTapHolderLikeMethod = "",
+        rightViewAgency = "com.dragon.read.component.shortvideo.impl.inject.view.m7",
+        rightViewAgencyEventMethod = "c0",
+        kmpAcctService = listOf(
+            "com.dragon.read.kmp.service.y",
+            "com.dragon.read.kmp.service.u0",
+        ),
+        kmpVipModel = "sb6.l",
+        hideIdNames = listOf("iu1", "fxu", "hs9"),
+        progressIdNames = listOf("hro"),
+        staticHideIds = emptyList(),
+        staticProgressIds = emptyList(),
+        pauseRestoreIds = emptyList(),
+    )
     internal val OVERSEA_73132 = Names(
         profileId = "OVERSEA-7.3.1.32",
         packageName = OVERSEA_PACKAGE,
@@ -397,6 +455,7 @@ object TargetNames {
 
         val normalized = versionName?.trim()?.substringBefore(' ') ?: ""
         val byVersion = when (normalized) {
+            "7.4.5.32" -> CN_74532
             "7.4.3.32" -> CN_74332
             "7.3.3.18" -> CN_73318
             "7.3.2.32" -> CN_73232
@@ -415,6 +474,7 @@ object TargetNames {
         }
 
         if (classLoader != null) {
+            try { Class.forName(CN_74532.shortHolder, false, classLoader); return CN_74532 } catch (_: Throwable) {}
             try { Class.forName(CN_74332.shortHolder, false, classLoader); return CN_74332 } catch (_: Throwable) {}
             try { Class.forName(CN_73318.shortHolder, false, classLoader); return CN_73318 } catch (_: Throwable) {}
 

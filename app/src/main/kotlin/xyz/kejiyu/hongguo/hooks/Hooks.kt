@@ -1580,7 +1580,11 @@ object Hooks {
         result
     }
 
-    private fun rightViewAgencyRoot(agency: Any): View? = findFieldValue(agency, "p") as? View
+    private fun rightViewAgencyRoot(agency: Any): View? {
+        (findFieldValue(agency, "p") as? View)?.let { return it }
+        val holder = findFieldValue(agency, "q") ?: return null
+        return findFieldValue(holder, "c") as? View
+    }
 
     private fun isRightViewAgencyVisible(agency: Any): Boolean {
         val rightView = rightViewAgencyRoot(agency) ?: return false
@@ -3453,6 +3457,13 @@ object Hooks {
             checkedClass = "qv5.c",
             style = "grouped-atomic-arrow",
         )
+        gNames.profileId == "CN-7.4.5.32" -> NativeSettingsSpec(
+            listMethods = setOf("e1", "f1"),
+            itemClass = "cl6.e",
+            clickClass = "cl6.b",
+            checkedClass = "cl6.c",
+            style = "cn74532-arrow",
+        )
         else -> NativeSettingsSpec(
 
             listMethods = setOf("c1", "d1"),
@@ -3496,6 +3507,11 @@ object Hooks {
                     setFieldValue(item, "b", true)
                     setFieldValue(item, "c", true)
                     setFieldValue(item, "o", java.util.concurrent.atomic.AtomicBoolean(gMasterOn))
+                }
+                "cn74532-arrow" -> {
+                    // cl6.e: j=副标题行可见 n=右箭头可见 (i 为 int 图标资源, 不可写 Boolean)
+                    setFieldValue(item, "j", true)
+                    setFieldValue(item, "n", true)
                 }
                 else -> {
 
@@ -3888,6 +3904,7 @@ object Hooks {
                 val layoutMethod = when {
                     pkg == TargetNames.OVERSEA_PACKAGE -> "Mf"
                     gNames.profileId == "CN-7.3.3.18" -> "Lg"
+                    gNames.profileId == "CN-7.4.5.32" -> "ki"
 
                     else -> "Eg"
                 }
@@ -4291,24 +4308,32 @@ object Hooks {
 
         try {
             val isNewCn = gNames.profileId == "CN-7.3.3.18"
+            val isCn74532 = gNames.profileId == "CN-7.4.5.32"
             val isOversea = gNames.profileId == "OVERSEA-7.3.1.32"
 
             val percentPlayerClassName = when {
+                isCn74532 -> "ib5.y"
                 isNewCn -> "nx4.w"
                 isOversea -> "ys4.x"
                 else -> "ov4.x"
             }
             val controllerClassName = when {
+                isCn74532 -> "com.dragon.read.component.shortvideo.impl.v2.view.adapter.a"
                 isNewCn -> "com.dragon.read.component.shortvideo.impl.v2.view.adapter.a"
                 isOversea -> "lt4.v"
                 else -> "bw4.v"
             }
             val controllerSetMethod = when {
+                isCn74532 -> "S4"
                 isNewCn -> "v2"
                 isOversea -> "u2"
                 else -> "r2"
             }
-            val controllerCacheMethod = if (isNewCn) "w" else "getCacheVideoSpeed"
+            val controllerCacheMethod = when {
+                isCn74532 -> "M1"
+                isNewCn -> "w"
+                else -> "getCacheVideoSpeed"
+            }
 
             val playerClass = Class.forName(percentPlayerClassName, false, classLoader)
             hac(playerClass, "defaultSpeedPlayerCtor") { chain ->
@@ -4632,47 +4657,69 @@ object Hooks {
             LogUtil.warn("  下载数量限制 AB Hook 失败: $e")
         }
 
+        val kmpNewModel = gNames.profileId == "CN-7.4.5.32"
         try {
-            val svcClass = Class.forName("s93.q", false, classLoader)
-            val a7Methods = svcClass.declaredMethods.filter { it.name == "A7" && it.parameterCount >= 1 }
+            val kmpLimitClassName = if (kmpNewModel) "g16.f\$b" else "s93.q"
+            val kmpLimitMethodName = if (kmpNewModel) "a" else "A7"
+            val svcClass = Class.forName(kmpLimitClassName, false, classLoader)
+            val a7Methods = svcClass.declaredMethods.filter {
+                it.name == kmpLimitMethodName && (if (kmpNewModel) it.parameterCount == 0 else it.parameterCount >= 1)
+            }
             a7Methods.forEachIndexed { index, method ->
-                module.hook(method).setId("downloadLimitKmpA7_$index")
+                module.hook(method).setId("downloadLimitKmp_$index")
                     .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                     .intercept(Hooker { chain ->
-                        val key = try { chain.getArg(0)?.toString() } catch (_: Throwable) { null }
-                        if (key == DOWNLOAD_LIMIT_AB_KEY && downloadUnlimitEnabledNow()) {
-                            val json = customDownloadLimitJson()
+                        val key = if (method.parameterCount >= 1) {
+                            try { chain.getArg(0)?.toString() } catch (_: Throwable) { null }
+                        } else null
+                        val hit = if (kmpNewModel) downloadUnlimitEnabledNow()
+                        else key == DOWNLOAD_LIMIT_AB_KEY && downloadUnlimitEnabledNow()
+                        if (hit) {
                             LogUtil.incr("downloadLimitKmpOverride")
-                            LogUtil.info("download limit override: s93.q.A7 -> $json profile=${gNames.profileId}")
-                            json
+                            if (kmpNewModel) {
+                                val obj = try {
+                                    Class.forName("g16.f", false, classLoader).getDeclaredConstructor().newInstance()
+                                } catch (_: Throwable) { null }
+                                if (obj != null) {
+                                    overwriteDownloadLimitObject(obj)
+                                    LogUtil.info("download limit override: g16.f\$b.a -> a/b/c=${currentDownloadLimitValues()} profile=${gNames.profileId}")
+                                    obj
+                                } else chain.proceed()
+                            } else {
+                                val json = customDownloadLimitJson()
+                                LogUtil.info("download limit override: s93.q.A7 -> $json profile=${gNames.profileId}")
+                                json
+                            }
                         } else chain.proceed()
                     })
             }
-            if (a7Methods.isNotEmpty()) LogUtil.info("  ✓ 下载数量限制 KMP Hook s93.q.A7")
+            if (a7Methods.isNotEmpty()) LogUtil.info("  ✓ 下载数量限制 KMP Hook $kmpLimitClassName.$kmpLimitMethodName")
         } catch (_: Throwable) {}
 
         try {
-            val configClass = Class.forName("xh5.f", false, classLoader)
+            val limitCfgName = if (kmpNewModel) "g16.f" else "xh5.f"
+            val limitSerName = if (kmpNewModel) "g16.f\$a" else "xh5.f\$a"
+            val configClass = Class.forName(limitCfgName, false, classLoader)
             hac(configClass, "downloadLimitConfigCtor") { chain ->
                 val result = chain.proceed()
                 if (downloadUnlimitEnabledNow() && overwriteDownloadLimitObject(chain.thisObject)) {
                     LogUtil.incr("downloadLimitObjectOverride")
-                    LogUtil.info("download limit override: xh5.f ctor a/b/c=${currentDownloadLimitValues()}")
+                    LogUtil.info("download limit override: $limitCfgName ctor a/b/c=${currentDownloadLimitValues()}")
                 }
                 result
             }
             try {
-                val serializerClass = Class.forName("xh5.f\$a", false, classLoader)
+                val serializerClass = Class.forName(limitSerName, false, classLoader)
                 ham(serializerClass, "deserialize", "downloadLimitDeserialize") { chain ->
                     val result = chain.proceed()
                     if (downloadUnlimitEnabledNow() && overwriteDownloadLimitObject(result)) {
                         LogUtil.incr("downloadLimitDeserializeOverride")
-                        LogUtil.info("download limit override: xh5.f\$a.deserialize a/b/c=${currentDownloadLimitValues()}")
+                        LogUtil.info("download limit override: $limitSerName.deserialize a/b/c=${currentDownloadLimitValues()}")
                     }
                     result
                 }
             } catch (_: Throwable) {}
-            LogUtil.info("  ✓ 下载数量限制对象 Hook xh5.f")
+            LogUtil.info("  ✓ 下载数量限制对象 Hook $limitCfgName")
         } catch (_: Throwable) {}
 
         try { val c = Class.forName("com.dragon.read.component.biz.impl.BsGoldBoxServiceImpl", false, classLoader); ham(c, "tryAttach", "gb") { chain -> if (gMasterOn && gAdOn) null else chain.proceed() }; LogUtil.info("  ✓ goldBox") } catch (e: Exception) { LogUtil.warn("  BsGoldBoxServiceImpl 未找到") }
