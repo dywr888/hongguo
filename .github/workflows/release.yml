@@ -1,0 +1,64 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Configure release signing (if secrets present)
+        run: |
+          if [ -n "${{ secrets.STORE_FILE }}" ] && [ -n "${{ secrets.STORE_PASSWORD }}" ] && [ -n "${{ secrets.KEY_ALIAS }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "${{ secrets.STORE_FILE }}" | base64 -d > hongguo.jks
+            cat > keystore.properties <<PROP
+storeFile=/root/work/hongguo/hongguo.jks
+storePassword=${{ secrets.STORE_PASSWORD }}
+keyAlias=${{ secrets.KEY_ALIAS }}
+keyPassword=${{ secrets.KEY_PASSWORD }}
+PROP
+            echo '✓ 已配置 release 签名'
+          else
+            echo '⚠ 未配置签名 secrets，将使用 debug 签名回退（仅测试用途）'
+          fi
+
+      - name: Build release APK
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Hongguo Module ${{ github.ref_name }}
+          body: |
+            ## Hongguo 模块 ${{ github.ref_name }}
+            - 适配红果短剧 CN 版本 (Xposed/LSPosed 模块)
+            - 支持: 7.4.5.32, 7.4.3.32, 7.3.3.18, 7.3.2.32, 7.3.1.32
+            - 构建由 GitHub Actions 自动完成
+            - 签名: 配置 STORE secrets 用 release 签名，否则 debug 签名（仅测试）
+          files: app/build/outputs/apk/release/app-release.apk
